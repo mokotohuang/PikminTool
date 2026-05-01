@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時間加算器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f6;
+            padding-top: 50px;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 350px;
+        }
+        #clock {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        input {
+            padding: 10px;
+            font-size: 1rem;
+            width: 80%;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            outline: none;
+            text-align: center;
+        }
+        input:focus { border-color: #3498db; }
+        .controls { margin-top: 15px; }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        .btn-clear { background-color: #e74c3c; color: white; }
+        .btn-clear:hover { background-color: #c0392b; }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+            text-align: left;
+        }
+        li {
+            background: #f9f9f9;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-delete {
+            background: #95a5a6;
+            color: white;
+            font-size: 0.8rem;
+        }
+        .btn-delete:hover { background: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="clock">00:00:00</div>
+    
+    <input type="text" id="timeInput" placeholder="輸入 4 碼數字 (mmss)" maxlength="4">
+    
+    <div class="controls">
+        <button class="btn-clear" onclick="clearAll()">清空清單 (按鈕2)</button>
+    </div>
+
+    <ul id="timeList"></ul>
+</div>
+
+<script>
+    // 1. 更新時鐘 Label
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. 監聽 Enter 鍵
+    const inputField = document.getElementById('timeInput');
+    inputField.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const val = this.value;
+            if (val.length === 4 && !isNaN(val)) {
+                addTimeToList(val);
+                this.value = ''; // 清空輸入框
+            } else {
+                alert('請輸入正確的 4 碼數字格式 (如 0530 代表 5分30秒)');
+            }
+        }
+    });
+
+    // 3. 計算並加入清單
+    function addTimeToList(mmss) {
+        const minsToAdd = parseInt(mmss.substring(0, 2));
+        const secsToAdd = parseInt(mmss.substring(2, 4));
+
+        const targetTime = new Date();
+        targetTime.setMinutes(targetTime.getMinutes() + minsToAdd);
+        targetTime.setSeconds(targetTime.getSeconds() + secsToAdd);
+
+        const timeStr = targetTime.toTimeString().split(' ')[0];
+        
+        displayItem(timeStr);
+    }
+
+    // 4. 顯示於 UI
+    function displayItem(timeStr) {
+        const list = document.getElementById('timeList');
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span>計算結果: <strong>${timeStr}</strong></span>
+            <button class="btn-delete" onclick="removeEntry(this)">移除 (按鈕1)</button>
+        `;
+        list.appendChild(li);
+    }
+
+    // 按鈕 1：移除單筆
+    function removeEntry(btn) {
+        btn.parentElement.remove();
+    }
+
+    // 按鈕 2：清空清單
+    function clearAll() {
+        document.getElementById('timeList').innerHTML = '';
+    }
+</script>
+
+</body>
+</html>
