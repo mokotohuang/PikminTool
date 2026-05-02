@@ -1,314 +1,223 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>時間提醒工具 Pro</title>
-  <style>
-    :root {
-      --primary-color: #007bff;
-      --danger-color: #dc3545;
-      --bg-color: #f8f9fa;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時間提醒工具 (清理優化版)</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            background-color: var(--bg-color); padding: 20px; margin: 0;
+        }
+        .container {
+            background: white; padding: 2rem; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center;
+            max-width: 450px; width: 100%;
+        }
+        #clock {
+            font-size: 3.5rem; color: var(--primary-color); margin: 10px 0;
+            font-weight: bold; font-family: 'Courier New', Courier, monospace;
+        }
+        .main-input {
+            padding: 12px; font-size: 1.2rem; width: 85%; border: 2px solid #ddd;
+            border-radius: 10px; outline: none; text-align: center;
+        }
+        .help-text { font-size: 0.85rem; color: #666; margin-top: 10px; }
+        
+        /* 按鈕區塊優化 */
+        .controls { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+        button { 
+            cursor: pointer; border: none; border-radius: 8px; 
+            font-weight: bold; padding: 10px; transition: 0.2s; 
+        }
+        .btn-clear-all { background-color: var(--danger-color); color: white; flex: 1; min-width: 120px; }
+        .btn-clear-expired { background-color: #6c757d; color: white; flex: 1; min-width: 120px; }
+        .btn-test { background-color: #f0f0f0; color: #333; flex: 1; min-width: 80px; font-size: 0.8rem; }
+        button:hover { opacity: 0.8; }
+        
+        ul { list-style: none; padding: 0; margin-top: 10px; width: 100%; }
+        li {
+            background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 12px;
+            border: 2px solid #eee; display: flex; flex-direction: column; gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .alarm-warning {
+            border-color: var(--warning-color); background-color: #fff9e6;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 50% { border-color: var(--danger-color); background-color: #fff0f0; } }
 
-    body {
-      font-family: "Microsoft JhengHei", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: var(--bg-color);
-      padding: 20px;
-      margin: 0;
-    }
+        .item-expired {
+            background-color: #f0f0f0 !important; border-color: #ddd !important; opacity: 0.7;
+        }
+        .item-expired .target-label { color: #888 !important; text-decoration: line-through; }
 
-    .container {
-      background: white;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
-    }
-
-    #clock {
-      font-size: 3.5rem;
-      color: var(--primary-color);
-      margin: 10px 0;
-      font-weight: bold;
-      font-family: 'Courier New', Courier, monospace;
-    }
-
-    input {
-      padding: 12px;
-      font-size: 1.2rem;
-      width: 85%;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      outline: none;
-      text-align: center;
-      transition: 0.3s;
-    }
-
-    input:focus {
-      border-color: #28a745;
-      box-shadow: 0 0 8px rgba(40, 167, 69, 0.2);
-    }
-
-    .help-text {
-      font-size: 0.85rem;
-      color: #666;
-      margin-top: 10px;
-      line-height: 1.6;
-    }
-
-    .controls {
-      margin: 20px 0;
-      display: flex;
-      gap: 10px;
-    }
-
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      transition: 0.2s;
-      font-weight: bold;
-    }
-
-    .btn-clear {
-      background-color: var(--danger-color);
-      color: white;
-      padding: 10px;
-      flex: 2;
-    }
-
-    .btn-test {
-      background-color: #6c757d;
-      color: white;
-      padding: 10px;
-      flex: 1;
-      font-size: 0.8rem;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 10px;
-    }
-
-    li {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border: 2px solid #eee;
-      animation: slideIn 0.3s ease-out;
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateX(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-
-    .alarm-warning {
-      border-color: #ffc107;
-      background-color: #fff9e6;
-      animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-      50% {
-        border-color: #dc3545;
-        background-color: #fff0f0;
-      }
-    }
-
-    .info {
-      text-align: left;
-    }
-
-    .target-label {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .remind-label {
-      font-size: 0.8rem;
-      color: #d63384;
-      font-weight: normal;
-    }
-
-    .delete-btn {
-      background: #adb5bd;
-      color: white;
-      padding: 6px 12px;
-      font-size: 0.8rem;
-    }
-
-    .delete-btn:hover {
-      background: #868e96;
-    }
-  </style>
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .info { text-align: left; }
+        .target-label { font-size: 1.1rem; font-weight: bold; color: #333; display: block; }
+        .remind-label { font-size: 0.8rem; color: #d63384; }
+        .note-input { width: 100%; padding: 8px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .delete-btn { background: #adb5bd; color: white; padding: 6px 12px; font-size: 0.8rem; }
+    </style>
 </head>
-
 <body>
 
-  <div class="container">
-    <h2 style="margin:0; font-size: 1.2rem; color: #555;">目前時間</h2>
+<div class="container">
     <div id="clock">00:00:00</div>
-
-    <input type="text" id="timeInput" placeholder="輸入 4 碼 (例如 0500)" maxlength="4" autofocus>
-    <div class="help-text">
-      輸入分鐘秒數後按 <strong>Enter</strong><br>
-      系統將在 <strong>1 分鐘前</strong> 自動響起警報
-    </div>
-
+    <input type="text" id="timeInput" class="main-input" placeholder="輸入 4 碼 (例如 0500)" maxlength="4" autofocus>
+    <div class="help-text">輸入後按 <strong>Enter</strong> 預約 (1 分鐘前提醒)</div>
+    
     <div class="controls">
-      <button class="btn-clear" onclick="clearAll()">🗑️ 清空清單 (按鈕2)</button>
-      <button class="btn-test" onclick="unlockAndTest()">🔊 測試音效</button>
+        <button class="btn-clear-expired" onclick="clearExpired()">🧹 清理過期項</button>
+        <button class="btn-clear-all" onclick="clearAll()">🗑️ 全部清空</button>
+        <button class="btn-test" onclick="unlockAndTest()">🔊 測試</button>
     </div>
-
-    <hr style="border: 0; border-top: 1px solid #eee;">
+    
     <ul id="timeList"></ul>
-  </div>
+</div>
 
-  <script>
+<script>
     let audioCtx = null;
     let alarms = [];
-    // 1. 每秒更新時鐘
+
     function updateClock() {
-      const now = new Date();
-      const currentTime = now.toTimeString().split(' ')[0];
-      document.getElementById('clock').textContent = currentTime;
-      checkAlarms(currentTime);
+        const now = new Date();
+        const currentTime = now.toTimeString().split(' ')[0];
+        document.getElementById('clock').textContent = currentTime;
+        checkAlarms(currentTime);
     }
     setInterval(updateClock, 1000);
-    updateClock();
-    // 2. 音效合成器 (好聽的 Sine 波)
+
     function playNote(freq, duration) {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine'; // 圓潤好聽的波形
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
     }
-    // 3. 完整的提示音旋律 (好聽的和弦)
+
     function playAlarmSequence() {
-      const notes = [523, 659, 784, 1046];
-      notes.forEach((freq, index) => {
-        setTimeout(() => {
-          playNote(freq, 0.5);
-        }, index * 200);
-      });
+        const notes = [523, 659, 783, 1046, 783, 1046];
+        notes.forEach((freq, index) => {
+            setTimeout(() => playNote(freq, 0.5), index * 200);
+        });
     }
-    // 4. 測試按鈕功能
+
     function unlockAndTest() {
-      if (!audioCtx) {
-        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
-      }
-      playAlarmSequence();
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        playAlarmSequence();
     }
-    // 5. 監聽 Enter 鍵 (同時隱形解鎖音效)
-    const inputField = document.getElementById('timeInput');
-    inputField.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        // 按下 Enter 的瞬間初始化 AudioContext
-        if (!audioCtx) {
-          audioCtx = new(window.AudioContext || window.webkitAudioContext)();
-        } else if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
+
+    document.getElementById('timeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            else if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const val = this.value;
+            if (val.length === 4 && !isNaN(val)) {
+                const mins = parseInt(val.substring(0, 2));
+                const secs = parseInt(val.substring(2, 4));
+                const targetDate = new Date(Date.now() + (mins * 60 + secs) * 1000);
+                const remindDate = new Date(targetDate.getTime() - 60000);
+                
+                const targetStr = targetDate.toTimeString().split(' ')[0];
+                const remindStr = remindDate.toTimeString().split(' ')[0];
+                
+                addItem(targetStr, remindStr);
+                this.value = '';
+                playNote(880, 0.1);
+            }
         }
-        const val = this.value;
-        if (val.length === 4 && !isNaN(val)) {
-          const mins = parseInt(val.substring(0, 2));
-          const secs = parseInt(val.substring(2, 4));
-          const target = new Date();
-          target.setMinutes(target.getMinutes() + mins);
-          target.setSeconds(target.getSeconds() + secs);
-          const targetStr = target.toTimeString().split(' ')[0];
-          const remind = new Date(target.getTime() - 60000);
-          const remindStr = remind.toTimeString().split(' ')[0];
-          addItem(targetStr, remindStr);
-          this.value = '';
-          // 設定成功小提示音
-          playNote(880, 0.1);
-        } else {
-          alert('請輸入 4 位數字 (如 0230 代表 2 分 30 秒)');
-        }
-      }
     });
 
     function addItem(targetStr, remindStr) {
-      const id = Date.now();
-      const list = document.getElementById('timeList');
-      const li = document.createElement('li');
-      li.id = `item-${id}`;
-      li.innerHTML = `
-            <div class="info">
-                <span class="target-label">🎯 目標：${targetStr}</span>
-                <span class="remind-label">🔔 提醒：${remindStr}</span>
+        const id = Date.now();
+        const list = document.getElementById('timeList');
+        const li = document.createElement('li');
+        li.id = `item-${id}`;
+        li.innerHTML = `
+            <div class="item-header">
+                <div class="info">
+                    <span class="target-label">🎯 目標：${targetStr}</span>
+                    <span class="remind-label">🔔 提醒：${remindStr}</span>
+                </div>
+                <button class="delete-btn" onclick="removeEntry(${id})">移除</button>
             </div>
-            <button class="delete-btn" onclick="removeEntry(${id})">移除</button>
+            <input type="text" class="note-input" placeholder="備註資訊...">
         `;
-      list.prepend(li);
-      alarms.push({
-        id,
-        target: targetStr,
-        remind: remindStr,
-        triggered: false
-      });
+        list.prepend(li);
+        alarms.push({ id, target: targetStr, remind: remindStr, triggered: false, expired: false });
     }
 
     function checkAlarms(nowStr) {
-      alarms.forEach(a => {
-        if (a.remind === nowStr && !a.triggered) {
-          a.triggered = true;
-          triggerAlarm(a.id, a.target);
-        }
-      });
+        alarms.forEach(a => {
+            const el = document.getElementById(`item-${a.id}`);
+            if (!el) return;
+
+            if (a.remind === nowStr && !a.triggered) {
+                a.triggered = true;
+                triggerAlarm(a.id, a.target);
+            }
+
+            const nowVal = parseInt(nowStr.replace(/:/g, ''));
+            const targetVal = parseInt(a.target.replace(/:/g, ''));
+
+            if (nowVal >= targetVal && !a.expired) {
+                a.expired = true;
+                el.classList.add('item-expired');
+            }
+        });
     }
 
     function triggerAlarm(id, targetTime) {
-      const el = document.getElementById(`item-${id}`);
-      if (el) el.classList.add('alarm-warning');
-      playAlarmSequence();
-      // 延遲 1.5 秒再跳出 Alert，確保聲音有先響起
-      setTimeout(() => {
-        alert(`【時間提醒】\n\n再過一分鐘即將到達目標時間：${targetTime}`);
-        if (el) el.classList.remove('alarm-warning');
-      }, 1500);
+        const el = document.getElementById(`item-${id}`);
+        if (el) el.classList.add('alarm-warning');
+        playAlarmSequence();
+        const note = el.querySelector('.note-input').value;
+        const noteMsg = note ? `\n備註：${note}` : "";
+
+        setTimeout(() => {
+            alert(`【時間提醒】\n\n即將到達目標時間：${targetTime}${noteMsg}`);
+            if (el && !el.classList.contains('item-expired')) {
+                el.classList.remove('alarm-warning');
+            }
+        }, 1500);
     }
 
     function removeEntry(id) {
-      document.getElementById(`item-${id}`)?.remove();
-      alarms = alarms.filter(a => a.id !== id);
+        document.getElementById(`item-${id}`)?.remove();
+        alarms = alarms.filter(a => a.id !== id);
+    }
+
+    // --- 新增功能：只清理過期的項目 ---
+    function clearExpired() {
+        const expiredItems = alarms.filter(a => a.expired);
+        expiredItems.forEach(a => {
+            document.getElementById(`item-${a.id}`)?.remove();
+        });
+        alarms = alarms.filter(a => !a.expired);
     }
 
     function clearAll() {
-      document.getElementById('timeList').innerHTML = '';
-      alarms = [];
+        if(confirm("確定要清空所有清單嗎？")) {
+            document.getElementById('timeList').innerHTML = '';
+            alarms = [];
+        }
     }
-  </script>
-
+</script>
 </body>
-
 </html>
