@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>時間提醒工具 (清理優化版)</title>
+    <title>自動排序時間提醒工具</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -30,23 +30,17 @@
             border-radius: 10px; outline: none; text-align: center;
         }
         .help-text { font-size: 0.85rem; color: #666; margin-top: 10px; }
-        
-        /* 按鈕區塊優化 */
         .controls { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 8px; }
-        button { 
-            cursor: pointer; border: none; border-radius: 8px; 
-            font-weight: bold; padding: 10px; transition: 0.2s; 
-        }
+        button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; padding: 10px; transition: 0.2s; }
         .btn-clear-all { background-color: var(--danger-color); color: white; flex: 1; min-width: 120px; }
         .btn-clear-expired { background-color: #6c757d; color: white; flex: 1; min-width: 120px; }
         .btn-test { background-color: #f0f0f0; color: #333; flex: 1; min-width: 80px; font-size: 0.8rem; }
-        button:hover { opacity: 0.8; }
         
-        ul { list-style: none; padding: 0; margin-top: 10px; width: 100%; }
+        ul { list-style: none; padding: 0; margin-top: 10px; width: 100%; display: flex; flex-direction: column; }
         li {
             background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 12px;
             border: 2px solid #eee; display: flex; flex-direction: column; gap: 10px;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease; /* 增加平滑動畫效果 */
         }
         
         .alarm-warning {
@@ -56,7 +50,8 @@
         @keyframes pulse { 50% { border-color: var(--danger-color); background-color: #fff0f0; } }
 
         .item-expired {
-            background-color: #f0f0f0 !important; border-color: #ddd !important; opacity: 0.7;
+            background-color: #f0f0f0 !important; border-color: #ddd !important; opacity: 0.6;
+            order: 9999; /* 強制將過期項推至清單最後面 */
         }
         .item-expired .target-label { color: #888 !important; text-decoration: line-through; }
 
@@ -73,7 +68,7 @@
 <div class="container">
     <div id="clock">00:00:00</div>
     <input type="text" id="timeInput" class="main-input" placeholder="輸入 4 碼 (例如 0500)" maxlength="4" autofocus>
-    <div class="help-text">輸入後按 <strong>Enter</strong> 預約 (1 分鐘前提醒)</div>
+    <div class="help-text">輸入後按 <strong>Enter</strong>，清單會自動依時間排序</div>
     
     <div class="controls">
         <button class="btn-clear-expired" onclick="clearExpired()">🧹 清理過期項</button>
@@ -137,57 +132,94 @@
                 const targetStr = targetDate.toTimeString().split(' ')[0];
                 const remindStr = remindDate.toTimeString().split(' ')[0];
                 
-                addItem(targetStr, remindStr);
+                addItem(targetStr, remindStr, targetDate.getTime());
                 this.value = '';
                 playNote(880, 0.1);
             }
         }
     });
 
-    function addItem(targetStr, remindStr) {
+    function addItem(targetStr, remindStr, targetTimestamp) {
         const id = Date.now();
-        const list = document.getElementById('timeList');
-        const li = document.createElement('li');
-        li.id = `item-${id}`;
-        li.innerHTML = `
-            <div class="item-header">
-                <div class="info">
-                    <span class="target-label">🎯 目標：${targetStr}</span>
-                    <span class="remind-label">🔔 提醒：${remindStr}</span>
+        // 將新資料加入陣列
+        alarms.push({ 
+            id, 
+            target: targetStr, 
+            remind: remindStr, 
+            timestamp: targetTimestamp, // 用於排序的絕對時間
+            triggered: false, 
+            expired: false,
+            note: "" // 預留備註欄位
+        });
+
+        renderList(); // 重新渲染清單
+    }
+
+    // --- 核心功能：排序並重新渲染清單 ---
+    function renderList() {
+        const listEl = document.getElementById('timeList');
+        
+        // 排序：先比是否過期，沒過期的按 timestamp 排序
+        alarms.sort((a, b) => {
+            if (a.expired !== b.expired) return a.expired ? 1 : -1;
+            return a.timestamp - b.timestamp;
+        });
+
+        // 重新構建 HTML (保留現有的備註內容)
+        const currentNotes = {};
+        document.querySelectorAll('.note-input').forEach(input => {
+            const id = input.closest('li').id.replace('item-', '');
+            currentNotes[id] = input.value;
+        });
+
+        listEl.innerHTML = '';
+        alarms.forEach(a => {
+            const li = document.createElement('li');
+            li.id = `item-${a.id}`;
+            if (a.expired) li.classList.add('item-expired');
+            
+            const savedNote = currentNotes[a.id] || "";
+            
+            li.innerHTML = `
+                <div class="item-header">
+                    <div class="info">
+                        <span class="target-label">🎯 目標：${a.target}</span>
+                        <span class="remind-label">🔔 提醒：${a.remind}</span>
+                    </div>
+                    <button class="delete-btn" onclick="removeEntry(${a.id})">移除</button>
                 </div>
-                <button class="delete-btn" onclick="removeEntry(${id})">移除</button>
-            </div>
-            <input type="text" class="note-input" placeholder="備註資訊...">
-        `;
-        list.prepend(li);
-        alarms.push({ id, target: targetStr, remind: remindStr, triggered: false, expired: false });
+                <input type="text" class="note-input" placeholder="備註資訊..." value="${savedNote}">
+            `;
+            listEl.appendChild(li);
+        });
     }
 
     function checkAlarms(nowStr) {
-        alarms.forEach(a => {
-            const el = document.getElementById(`item-${a.id}`);
-            if (!el) return;
+        let needResort = false;
+        const nowVal = parseInt(nowStr.replace(/:/g, ''));
 
+        alarms.forEach(a => {
             if (a.remind === nowStr && !a.triggered) {
                 a.triggered = true;
                 triggerAlarm(a.id, a.target);
             }
 
-            const nowVal = parseInt(nowStr.replace(/:/g, ''));
             const targetVal = parseInt(a.target.replace(/:/g, ''));
-
             if (nowVal >= targetVal && !a.expired) {
                 a.expired = true;
-                el.classList.add('item-expired');
+                needResort = true; // 狀態改變，標記需要重新排序
             }
         });
+
+        if (needResort) renderList();
     }
 
     function triggerAlarm(id, targetTime) {
         const el = document.getElementById(`item-${id}`);
         if (el) el.classList.add('alarm-warning');
         playAlarmSequence();
-        const note = el.querySelector('.note-input').value;
+        
+        const note = el ? el.querySelector('.note-input').value : "";
         const noteMsg = note ? `\n備註：${note}` : "";
 
         setTimeout(() => {
@@ -199,23 +231,19 @@
     }
 
     function removeEntry(id) {
-        document.getElementById(`item-${id}`)?.remove();
         alarms = alarms.filter(a => a.id !== id);
+        renderList();
     }
 
-    // --- 新增功能：只清理過期的項目 ---
     function clearExpired() {
-        const expiredItems = alarms.filter(a => a.expired);
-        expiredItems.forEach(a => {
-            document.getElementById(`item-${a.id}`)?.remove();
-        });
         alarms = alarms.filter(a => !a.expired);
+        renderList();
     }
 
     function clearAll() {
         if(confirm("確定要清空所有清單嗎？")) {
-            document.getElementById('timeList').innerHTML = '';
             alarms = [];
+            renderList();
         }
     }
 </script>
